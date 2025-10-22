@@ -1,0 +1,3 @@
+git checkout master -- TestDataPool_Alloems.xlsx
+
+This query generates a date range (2025-01-01 to 2025-01-07) using a recursive CTE, joins it with sales data, and fills missing sales values using either 0, the average sales, or the average of adjacent days.

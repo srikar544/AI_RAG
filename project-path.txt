@@ -1,0 +1,17 @@
+rag_project/
+│
+├── app.py
+├── producer.py
+├── consumer.py
+├── config.py
+├── db_setup.py
+├── rag_engine.py
+├── rag_pipeline.py
+├── cache_manager.py
+├── monitor.py            # optional: simple monitor for queue metrics
+├── requirements.txt
+├── README.md
+└── frontend/
+    ├── index.html
+    ├── app.js
+    └── style.css

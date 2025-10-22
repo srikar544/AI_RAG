@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-consumer
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: rag-consumer
+  template:
+    metadata:
+      labels:
+        app: rag-consumer
+    spec:
+      containers:
+      - name: rag-consumer
+        image: <your_ecr_or_dockerhub>/rag-consumer:latest
+        env:
+          - name: RABBITMQ_HOST
+            value: rabbitmq
+          - name: REDIS_HOST
+            value: redis

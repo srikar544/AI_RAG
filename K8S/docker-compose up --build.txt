@@ -1,0 +1,24 @@
+docker-compose up --build
+Increase replicas for consumers, or integrate KEDA for auto-scaling based on RabbitMQ queue length.
+Flask app uses LoadBalancer service to expose externally.
+
+aws ecr create-repository --repository-name rag-app
+docker build -t flask-app ./app
+docker tag flask-app:latest <AWS_ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/rag-app:latest
+docker push <AWS_ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/rag-app:latest
+
+
+kubectl apply -f k8s/rabbitmq-deployment.yaml
+kubectl apply -f k8s/redis-deployment.yaml
+kubectl apply -f k8s/flask-deployment.yaml
+kubectl apply -f k8s/consumer-deployment.yaml
+
+
+kubectl get svc flask-app
+
+
+Docker + Compose = easy local dev & testing
+Kubernetes = production-ready deployment on AWS
+Components: Flask + SocketIO, RabbitMQ, Redis, Consumer
+Optional: KEDA for auto-scaling consumers
+Minimal config changes needed to move from local to AWS

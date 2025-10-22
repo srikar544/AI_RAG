@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>RAG Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>RAG Dashboard (WebSocket Live)</h1>
+
+    <div class="form">
+      <input id="user" placeholder="Your name" />
+      <textarea id="question" placeholder="Enter your question"></textarea>
+      <button id="askBtn">Ask</button>
+    </div>
+
+    <div class="status">
+      <h3>Live Results</h3>
+      <ul id="results"></ul>
+    </div>
+
+    <div class="history">
+      <h3>Recent (DB)</h3>
+      <button id="refreshBtn">Refresh</button>
+      <div id="recent"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
