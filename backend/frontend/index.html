@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <title>RAG Dashboard</title>
   <link rel="stylesheet" href="/static/style.css" />
-  <script src="/static/app.js"></script>
 </head>
 <body>
   <div class="container">
@@ -28,7 +27,10 @@
     </div>
   </div>
 
+  <!-- Load Socket.IO first -->
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-  <script src="app.js"></script>
+
+  <!-- Then your app.js -->
+  <script src="/static/app.js"></script>
 </body>
 </html>
