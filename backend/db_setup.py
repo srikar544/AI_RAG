@@ -1,39 +1,3 @@
-"""
-db_setup.py
-------------
-
-Purpose:
-    Defines the database model and setup used to store RAG query results.
-    Uses SQLAlchemy ORM to create and manage a lightweight SQLite database.
-
-    The `QueryResult` table holds all questions, answers, and related
-    metadata — serving as both a logging and caching layer.
-
-Responsibilities:
-    ✅ Define the database schema using SQLAlchemy ORM
-    ✅ Establish connection to SQLite (or any configured DB)
-    ✅ Provide a reusable session factory for DB operations
-"""
-
-# -------------------------------------------------------------------------
-# Imports
-# -------------------------------------------------------------------------
-from sqlalchemy import (
-    create_engine, Column, String, Integer, Text, DateTime, Boolean
-)
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-import datetime
-import json
-from config import DB_PATH
-
-
-# -------------------------------------------------------------------------
-# SQLAlchemy Base Class
-# -------------------------------------------------------------------------
-Base = declarative_base()
-
-
 # -------------------------------------------------------------------------
 # ORM Model Definition
 # -------------------------------------------------------------------------
@@ -66,21 +30,10 @@ class QueryResult(Base):
         metadata (text, nullable):
             Additional contextual or diagnostic info.
             Stored as a JSON string (e.g., intent, keywords, runtime, etc.).
+            Python attribute renamed to `meta_info` to avoid SQLAlchemy conflict.
 
         timestamp (datetime):
             When the record was created. Defaults to UTC now.
-
-    Example Entry:
-        {
-            "id": 12,
-            "user": "alice",
-            "question": "Summarize chapter 2",
-            "answer": "Chapter 2 focuses on ...",
-            "llm_model": "GPT-4",
-            "cache_hit": False,
-            "metadata": "{\"intent\": \"summarization\", \"keywords\": [\"chapter\", \"summary\"]}",
-            "timestamp": "2025-10-20T09:22:33"
-        }
     """
     __tablename__ = "query_results"
 
@@ -90,18 +43,5 @@ class QueryResult(Base):
     answer = Column(Text)
     llm_model = Column(String)
     cache_hit = Column(Boolean, default=False)
-    metadata = Column(Text, nullable=True)
+    meta_info = Column("metadata", Text, nullable=True)  # <-- fixed
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
-
-
-# -------------------------------------------------------------------------
-# Database Engine and Session Factory
-# -------------------------------------------------------------------------
-# SQLite database path loaded from config.py
-engine = create_engine(DB_PATH, connect_args={"check_same_thread": False})
-
-# Create all tables (runs once at startup)
-Base.metadata.create_all(engine)
-
-# Session factory for transactional DB access
-SessionLocal = sessionmaker(bind=engine)
