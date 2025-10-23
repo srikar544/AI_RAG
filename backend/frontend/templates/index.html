@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <title>RAG Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <div class="container">
@@ -30,7 +30,7 @@
   <!-- Load Socket.IO first -->
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 
-  <!-- Then your app.js -->
-  <script src="/static/app.js"></script>
+  <!-- Use Flask url_for for app.js too -->
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>

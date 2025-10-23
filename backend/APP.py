@@ -1,7 +1,7 @@
 # app.py
 import threading
 import json
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, render_template
 from flask_socketio import SocketIO, emit
 import redis
 
@@ -13,8 +13,8 @@ from config import REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_RESULTS_CHANNEL
 # ------------------- Flask + SocketIO Setup -------------------
 app = Flask(
     __name__,
-    static_folder="frontend/static",  # static files folder
-    template_folder="frontend"        # HTML templates folder
+    static_folder="frontend/static",    # static files
+    template_folder="frontend/templates"  # HTML templates
 )
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
@@ -43,7 +43,7 @@ def handle_connect():
 @app.route("/")
 def index():
     """Serve the main HTML page"""
-    return send_from_directory("frontend", "index.html")
+    return render_template("index.html")  # renders index.html in templates/
 
 @app.route("/ask", methods=["POST"])
 def ask():
@@ -53,9 +53,11 @@ def ask():
     question = payload.get("question")
     if not question:
         return jsonify({"error": "question required"}), 400
+
     pdf_ids = payload.get("pdf_ids", ["default.pdf"])
     for pdf_id in pdf_ids:
         send_task(user, question, pdf_id)
+
     return jsonify({"status": "queued", "pdfs": pdf_ids})
 
 @app.route("/recent")
@@ -74,14 +76,9 @@ def recent():
         } for r in results
     ])
 
-# Optional: explicit static route (Flask serves automatically if static_folder is set)
-@app.route("/static/<path:filename>")
-def static_files(filename):
-    return send_from_directory("frontend/static", filename)
-
 # ------------------- Entry Point -------------------
 if __name__ == "__main__":
-    # Start Redis subscriber in a background thread
+    # Start Redis subscriber in background
     threading.Thread(target=redis_subscriber, daemon=True).start()
     # Run Flask-SocketIO server
     socketio.run(app, host="0.0.0.0", port=5000, debug=True)
