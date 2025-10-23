@@ -35,8 +35,7 @@ from config import (
 # Flask + SocketIO Setup
 # -----------------------------------------------------------------------------
 app = Flask(__name__, static_folder="frontend", template_folder="frontend")
-socketio = SocketIO(app, cors_allowed_origins="*")
-
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 # -----------------------------------------------------------------------------
 # Redis Setup
 # -----------------------------------------------------------------------------
