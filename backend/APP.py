@@ -58,13 +58,9 @@ def ask():
         send_task(user, question, pdf_id)
     return jsonify({"status": "queued", "pdfs": pdf_ids})
 
-# Optional: explicit static route if needed
-@app.route("/static/<path:filename>")
-def static_files(filename):
-    return send_from_directory("frontend/static", filename)
-
 @app.route("/recent")
 def recent():
+    """Return the 10 most recent queries from DB"""
     session = SessionLocal()
     results = session.query(QueryResult).order_by(QueryResult.created_at.desc()).limit(10).all()
     session.close()
@@ -77,6 +73,11 @@ def recent():
             "cache_hit": r.cache_hit
         } for r in results
     ])
+
+# Optional: explicit static route (Flask serves automatically if static_folder is set)
+@app.route("/static/<path:filename>")
+def static_files(filename):
+    return send_from_directory("frontend/static", filename)
 
 # ------------------- Entry Point -------------------
 if __name__ == "__main__":
