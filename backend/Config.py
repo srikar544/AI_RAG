@@ -43,4 +43,4 @@ PREFETCH_COUNT = 1                    # RabbitMQ prefetch count to limit unacked
 # -------------------------------------------------------------------------
 # Placeholder PDF Path (for rag_engine stub or testing)
 # -------------------------------------------------------------------------
-PDF_PATH = "sample.pdf"               # Default PDF to use if none provided
+PDF_PATH = "pdfs/sample.pdf"               # Default PDF to use if none provided

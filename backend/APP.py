@@ -22,6 +22,11 @@ import json
 from flask import Flask, request, jsonify, send_from_directory
 from flask_socketio import SocketIO, emit
 import redis
+import os
+
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
 # Local imports
 from producer import send_task                     # Pushes user questions into RabbitMQ
@@ -35,7 +40,7 @@ from config import (
 # Flask + SocketIO Setup
 # -----------------------------------------------------------------------------
 app = Flask(__name__, static_folder="frontend", template_folder="frontend")
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 # -----------------------------------------------------------------------------
 # Redis Setup
@@ -97,7 +102,7 @@ def serve_frontend():
     Serves the main frontend page (index.html) from the /frontend directory.
     Useful if your frontend (React, Vue, etc.) is bundled into this folder.
     """
-    return send_from_directory("frontend", "index.html")
+    return send_from_directory(FRONTEND_DIR, "index.html")
 
 
 @app.route("/ask", methods=["POST"])
@@ -152,6 +157,22 @@ def ask():
 
     # 6. Return confirmation
     return jsonify({"status": "queued", "pdfs": pdf_ids})
+
+@app.route("/recent", methods=["GET"])
+def recent():
+    session = SessionLocal()
+    results = session.query(QueryResult).order_by(QueryResult.timestamp.desc()).limit(10).all()
+    out = []
+    for r in results:
+        out.append({
+            "user": r.user,
+            "question": r.question,
+            "answer": r.answer,
+            "llm_model": r.llm_model,
+            "cache_hit": r.cache_hit
+        })
+    session.close()
+    return jsonify(out)
 
 
 # -----------------------------------------------------------------------------

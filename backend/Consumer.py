@@ -28,6 +28,11 @@ import json
 import threading
 from concurrent.futures import ThreadPoolExecutor
 import pika
+import sys
+import os
+
+# Add the utils folder to Python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../utils")))
 
 # Local imports (project modules)
 from config import (
