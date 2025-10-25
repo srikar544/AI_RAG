@@ -29,6 +29,10 @@ from producer import send_task
 from db_setup import SessionLocal, QueryResult
 from config import REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_RESULTS_CHANNEL
 
+PDF_FOLDER = r"D:\srikardata\AI\AI_RAG\backend\pdfs"
+
+
+
 # -----------------------------
 # Flask + SocketIO Setup
 # -----------------------------
@@ -84,12 +88,18 @@ def ask():
     question = payload.get("question")
     if not question:
         return jsonify({"error": "question required"}), 400
-    pdf_ids = payload.get("pdf_ids", ["default.pdf"])
+
+    pdf_ids = payload.get("pdf_ids", [])
+    # Keep only existing PDFs
+    pdf_ids = [pdf for pdf in pdf_ids if os.path.exists(os.path.join(PDF_FOLDER, pdf))]
+    if not pdf_ids:
+        return jsonify({"status": "error", "message": "No valid PDFs selected"}), 400
 
     for pdf_id in pdf_ids:
         send_task(user, question, pdf_id)
 
     return jsonify({"status": "queued", "pdfs": pdf_ids})
+
 
 @app.route("/recent", methods=["GET"])
 def recent():
@@ -107,6 +117,15 @@ def recent():
         })
     session.close()
     return jsonify(out)
+
+@app.route("/pdf_list", methods=["GET"])
+def pdf_list():
+    """Return list of PDF files available in PDF_FOLDER."""
+    try:
+        files = [f for f in os.listdir(PDF_FOLDER) if f.lower().endswith(".pdf")]
+        return jsonify(files)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # -----------------------------
 # Main Entry

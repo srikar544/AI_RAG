@@ -4,11 +4,11 @@ producer.py
 
 Purpose:
     Dynamically sends user questions + PDF references to RabbitMQ as JSON messages.
+    Accepts payload from UI or CLI input.
 """
 
 import pika
 import json
-import time
 from typing import Union, List
 from config import (
     RABBITMQ_HOST,
@@ -22,9 +22,13 @@ from config import (
 # -------------------------------------------------------------------------
 def send_task(user: str, question: str, pdf_ids: Union[str, List[str], None] = None, retries: int = 5) -> bool:
     if pdf_ids is None:
-        pdf_ids = ["default.pdf"]
+        pdf_ids = []  # No default PDF, must select explicitly
     elif isinstance(pdf_ids, str):
         pdf_ids = [pdf_ids]
+
+    if not pdf_ids:
+        print("[send_task] No PDFs provided, task skipped.")
+        return False
 
     payload = {
         "user": user,
@@ -62,17 +66,19 @@ def send_task(user: str, question: str, pdf_ids: Union[str, List[str], None] = N
         except pika.exceptions.AMQPConnectionError as e:
             attempt += 1
             print(f"[send_task] RabbitMQ connection failed (attempt {attempt}/{retries}): {e}")
-            time.sleep(3)
 
     print(f"[send_task] Failed to queue task after {retries} attempts: {payload}")
     return False
 
+
 # -------------------------------------------------------------------------
-# Dynamic Input Loop for Testing / UI Simulation
+# Accept JSON Payload (from UI or CLI)
 # -------------------------------------------------------------------------
 if __name__ == "__main__":
-    print("Enter tasks in JSON format, e.g.:")
-    print('{"user": "test_user", "question": "Who is Marcus Aurelius?", "pdf_ids": ["sample.pdf"]}')
+    import sys
+
+    print("Send JSON payload directly, e.g.:")
+    print('{"user": "web_user", "question": "Who is Marcus Aurelius?", "pdf_ids": ["sample.pdf"]}')
     print("Type 'exit' to quit.\n")
 
     while True:
@@ -81,9 +87,9 @@ if __name__ == "__main__":
             break
         try:
             data = json.loads(raw)
-            user = data.get("user")
-            question = data.get("question")
-            pdf_ids = data.get("pdf_ids")
+            user = data.get("user") or "web_user"
+            question = data.get("question") or ""
+            pdf_ids = data.get("pdf_ids") or []
             send_task(user, question, pdf_ids)
         except json.JSONDecodeError:
             print("Invalid JSON. Please try again.")

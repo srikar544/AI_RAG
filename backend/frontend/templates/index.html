@@ -12,6 +12,12 @@
     <div class="form">
       <input id="user" placeholder="Your name" />
       <textarea id="question" placeholder="Enter your question"></textarea>
+
+      <label for="pdfSelect">Select PDF(s):</label>
+      <select id="pdfSelect" multiple>
+        <!-- Options will be populated dynamically -->
+      </select>
+
       <button id="askBtn">Ask</button>
     </div>
 
@@ -30,7 +36,7 @@
   <!-- Load Socket.IO first -->
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 
-  <!-- Use Flask url_for for app.js too -->
+  <!-- Custom JS -->
   <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>
