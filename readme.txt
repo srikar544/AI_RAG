@@ -135,4 +135,5 @@ As soon as the answer is available, it is displayed live in the browser.
 User sees the answer appear in real-time without refreshing.
 
 
-
+docker run -d --name my-redis -p 6379:6379 redis
+docker run -d --name my-rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management

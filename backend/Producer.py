@@ -3,116 +3,109 @@ producer.py
 ------------
 
 Purpose:
-    This module acts as the **task producer** in the RAG processing pipeline.
-    It takes user input (question + PDF references) and sends it as a
-    serialized JSON message to a RabbitMQ queue.
+    Acts as the **task producer** in the RAG processing pipeline.
+    Sends user questions + PDF references to RabbitMQ as JSON messages.
 
-    The message is later consumed by `consumer.py`, which performs the actual
-    retrieval-augmented generation (RAG) logic.
-
-Key Responsibilities:
-    1. Accept incoming questions and metadata from users.
-    2. Validate and normalize input (ensure pdf_ids is a list).
-    3. Serialize data into JSON format.
-    4. Publish the message to RabbitMQ with persistent delivery mode.
+Features:
+    - Handles single or multiple PDFs
+    - Gracefully handles RabbitMQ connection errors
+    - Supports credentials
+    - Can be run standalone for testing
 """
 
 import pika
 import json
-from config import RABBITMQ_HOST, RABBITMQ_QUEUE
+import time
+from typing import Union, List
+from config import (
+    RABBITMQ_HOST,
+    RABBITMQ_QUEUE,
+    RABBITMQ_USER,
+    RABBITMQ_PASSWORD,
+)
 
 
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 # Core Publisher Function
-# -----------------------------------------------------------------------------
-def send_task(user: str, question: str, pdf_ids=None):
+# -------------------------------------------------------------------------
+def send_task(user: str, question: str, pdf_ids: Union[str, List[str], None] = None, retries: int = 3) -> bool:
     """
-    Send a single user question as a task to RabbitMQ.
+    Send a user question as a task to RabbitMQ.
 
     Parameters:
-        user (str):
-            Identifier of the user who submitted the question.
-            Typically used for personalization or tracking.
-
-        question (str):
-            The natural-language question to be processed by the RAG pipeline.
-
-        pdf_ids (str | list | None):
-            One or more identifiers for the PDFs to query from.
-            - If a single string is provided, it will be converted to a list.
-            - If not provided, defaults to ["default.pdf"].
+        user (str): User identifier for tracking purposes.
+        question (str): The natural-language question.
+        pdf_ids (str | list[str] | None): PDFs to query from. Defaults to ["default.pdf"].
+        retries (int): Number of retry attempts if RabbitMQ connection fails.
 
     Returns:
-        bool:
-            True if the message was successfully sent to RabbitMQ.
-
-    Flow:
-        1. Validate pdf_ids (convert to list if needed).
-        2. Create a JSON payload containing user, question, and pdf_ids.
-        3. Establish a connection to RabbitMQ.
-        4. Declare the queue (ensures existence).
-        5. Publish the message with `delivery_mode=2` for persistence.
-        6. Close the connection.
+        bool: True if message was successfully sent, False otherwise.
     """
 
-    # -------------------------------------------------------------------------
-    # 1️⃣ Ensure pdf_ids is a list
-    # -------------------------------------------------------------------------
+    # -----------------------------
+    # 1️⃣ Normalize pdf_ids
+    # -----------------------------
     if pdf_ids is None:
-        pdf_ids = ["default.pdf"]           # default fallback
+        pdf_ids = ["default.pdf"]
     elif isinstance(pdf_ids, str):
-        pdf_ids = [pdf_ids]                 # normalize single value into list
+        pdf_ids = [pdf_ids]
 
-    # -------------------------------------------------------------------------
-    # 2️⃣ Build the message payload
-    # -------------------------------------------------------------------------
+    # -----------------------------
+    # 2️⃣ Build payload
+    # -----------------------------
     payload = {
         "user": user,
         "question": question,
         "pdf_ids": pdf_ids
     }
 
-    # -------------------------------------------------------------------------
-    # 3️⃣ Establish RabbitMQ connection and publish the message
-    # -------------------------------------------------------------------------
-    # Each task is sent to the queue defined in config.RABBITMQ_QUEUE
-    # The `durable=True` flag ensures the queue and its messages survive restarts.
-    conn = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
-    ch = conn.channel()
-    ch.queue_declare(queue=RABBITMQ_QUEUE, durable=True)
+    # -----------------------------
+    # 3️⃣ Connect to RabbitMQ & publish
+    # -----------------------------
+    credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASSWORD)
+    parameters = pika.ConnectionParameters(host=RABBITMQ_HOST, credentials=credentials)
 
-    # -------------------------------------------------------------------------
-    # 4️⃣ Publish the message
-    # -------------------------------------------------------------------------
-    ch.basic_publish(
-        exchange='',                         # default exchange
-        routing_key=RABBITMQ_QUEUE,          # queue name
-        body=json.dumps(payload),            # serialize to JSON string
-        properties=pika.BasicProperties(delivery_mode=2)  # make message persistent
-    )
+    attempt = 0
+    while attempt < retries:
+        try:
+            connection = pika.BlockingConnection(parameters)
+            channel = connection.channel()
+            channel.queue_declare(queue=RABBITMQ_QUEUE, durable=True)
 
-    # -------------------------------------------------------------------------
-    # 5️⃣ Close connection and return success
-    # -------------------------------------------------------------------------
-    conn.close()
-    return True
+            channel.basic_publish(
+                exchange='',
+                routing_key=RABBITMQ_QUEUE,
+                body=json.dumps(payload),
+                properties=pika.BasicProperties(delivery_mode=2)
+            )
+
+            connection.close()
+            print(f"[send_task] Task queued: {payload}")
+            return True
+
+        except pika.exceptions.AMQPConnectionError as e:
+            attempt += 1
+            print(f"[send_task] RabbitMQ connection failed (attempt {attempt}/{retries}): {e}")
+            time.sleep(2)
+
+    # -----------------------------
+    # 4️⃣ Failed after retries
+    # -----------------------------
+    print(f"[send_task] Failed to queue task after {retries} attempts: {payload}")
+    return False
 
 
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 # Local Test Entry Point
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 if __name__ == "__main__":
-    """
-    Run this file directly to send a few sample tasks for testing purposes.
-    These tasks will appear in the RabbitMQ queue and be picked up by the consumer.
-    """
-    # ✅ Multiple PDFs per question
+    # Multiple PDFs per question
     send_task("tester", "Give me a summary of the introduction.", ["sample.pdf", "chapter1.pdf"])
     
-    # ✅ Single PDF (auto-wrapped into list)
+    # Single PDF
     send_task("tester2", "Explain RAG pipeline", "default.pdf")
     
-    # ✅ No PDF argument → defaults to ["default.pdf"]
+    # No PDF argument → defaults to ["default.pdf"]
     send_task("tester3", "Test default PDF")
 
-    print("Tasks sent")
+    print("All test tasks sent.")
