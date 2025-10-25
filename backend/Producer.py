@@ -24,11 +24,10 @@ from config import (
     RABBITMQ_PASSWORD,
 )
 
-
 # -------------------------------------------------------------------------
 # Core Publisher Function
 # -------------------------------------------------------------------------
-def send_task(user: str, question: str, pdf_ids: Union[str, List[str], None] = None, retries: int = 3) -> bool:
+def send_task(user: str, question: str, pdf_ids: Union[str, List[str], None] = None, retries: int = 5) -> bool:
     """
     Send a user question as a task to RabbitMQ.
 
@@ -63,7 +62,13 @@ def send_task(user: str, question: str, pdf_ids: Union[str, List[str], None] = N
     # 3️⃣ Connect to RabbitMQ & publish
     # -----------------------------
     credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASSWORD)
-    parameters = pika.ConnectionParameters(host=RABBITMQ_HOST, credentials=credentials)
+    parameters = pika.ConnectionParameters(
+        host=RABBITMQ_HOST,
+        port=5672,
+        credentials=credentials,
+        heartbeat=60,
+        blocked_connection_timeout=30
+    )
 
     attempt = 0
     while attempt < retries:
@@ -86,7 +91,7 @@ def send_task(user: str, question: str, pdf_ids: Union[str, List[str], None] = N
         except pika.exceptions.AMQPConnectionError as e:
             attempt += 1
             print(f"[send_task] RabbitMQ connection failed (attempt {attempt}/{retries}): {e}")
-            time.sleep(2)
+            time.sleep(3)
 
     # -----------------------------
     # 4️⃣ Failed after retries

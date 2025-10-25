@@ -33,7 +33,7 @@ DB_PATH = os.environ.get("DB_PATH", "sqlite:///rag_results.db")
 # -------------------------------------------------------------------------
 # Worker / Batching Settings
 # -------------------------------------------------------------------------
-BATCH_SIZE = int(os.environ.get("BATCH_SIZE", 5))
+BATCH_SIZE = int(os.environ.get("BATCH_SIZE", 1))
 WORKER_THREAD_POOL = int(os.environ.get("WORKER_THREAD_POOL", 4))
 
 # -------------------------------------------------------------------------
