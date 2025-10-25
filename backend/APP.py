@@ -93,11 +93,6 @@ def ask():
 
     return jsonify({"status": "queued", "pdfs": pdf_ids})
 
-@app.route("/static/<path:filename>")
-def static_files(filename):
-    """Serve static files (JS/CSS) from frontend/static."""
-    return send_from_directory("frontend/static", filename)
-
 # --------------------------------------------------------------------------
 # Entry Point
 # --------------------------------------------------------------------------
