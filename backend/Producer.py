@@ -3,14 +3,7 @@ producer.py
 ------------
 
 Purpose:
-    Acts as the **task producer** in the RAG processing pipeline.
-    Sends user questions + PDF references to RabbitMQ as JSON messages.
-
-Features:
-    - Handles single or multiple PDFs
-    - Gracefully handles RabbitMQ connection errors
-    - Supports credentials
-    - Can be run standalone for testing
+    Dynamically sends user questions + PDF references to RabbitMQ as JSON messages.
 """
 
 import pika
@@ -28,39 +21,17 @@ from config import (
 # Core Publisher Function
 # -------------------------------------------------------------------------
 def send_task(user: str, question: str, pdf_ids: Union[str, List[str], None] = None, retries: int = 5) -> bool:
-    """
-    Send a user question as a task to RabbitMQ.
-
-    Parameters:
-        user (str): User identifier for tracking purposes.
-        question (str): The natural-language question.
-        pdf_ids (str | list[str] | None): PDFs to query from. Defaults to ["default.pdf"].
-        retries (int): Number of retry attempts if RabbitMQ connection fails.
-
-    Returns:
-        bool: True if message was successfully sent, False otherwise.
-    """
-
-    # -----------------------------
-    # 1️⃣ Normalize pdf_ids
-    # -----------------------------
     if pdf_ids is None:
         pdf_ids = ["default.pdf"]
     elif isinstance(pdf_ids, str):
         pdf_ids = [pdf_ids]
 
-    # -----------------------------
-    # 2️⃣ Build payload
-    # -----------------------------
     payload = {
         "user": user,
         "question": question,
         "pdf_ids": pdf_ids
     }
 
-    # -----------------------------
-    # 3️⃣ Connect to RabbitMQ & publish
-    # -----------------------------
     credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASSWORD)
     parameters = pika.ConnectionParameters(
         host=RABBITMQ_HOST,
@@ -93,24 +64,28 @@ def send_task(user: str, question: str, pdf_ids: Union[str, List[str], None] = N
             print(f"[send_task] RabbitMQ connection failed (attempt {attempt}/{retries}): {e}")
             time.sleep(3)
 
-    # -----------------------------
-    # 4️⃣ Failed after retries
-    # -----------------------------
     print(f"[send_task] Failed to queue task after {retries} attempts: {payload}")
     return False
 
-
 # -------------------------------------------------------------------------
-# Local Test Entry Point
+# Dynamic Input Loop for Testing / UI Simulation
 # -------------------------------------------------------------------------
 if __name__ == "__main__":
-    # Multiple PDFs per question
-    send_task("tester", "Give me a summary of the introduction.", ["sample.pdf", "chapter1.pdf"])
-    
-    # Single PDF
-    send_task("tester2", "Explain RAG pipeline", "default.pdf")
-    
-    # No PDF argument → defaults to ["default.pdf"]
-    send_task("tester3", "Test default PDF")
+    print("Enter tasks in JSON format, e.g.:")
+    print('{"user": "test_user", "question": "Who is Marcus Aurelius?", "pdf_ids": ["sample.pdf"]}')
+    print("Type 'exit' to quit.\n")
 
-    print("All test tasks sent.")
+    while True:
+        raw = input("Enter payload JSON: ")
+        if raw.strip().lower() == "exit":
+            break
+        try:
+            data = json.loads(raw)
+            user = data.get("user")
+            question = data.get("question")
+            pdf_ids = data.get("pdf_ids")
+            send_task(user, question, pdf_ids)
+        except json.JSONDecodeError:
+            print("Invalid JSON. Please try again.")
+        except Exception as e:
+            print(f"Error sending task: {e}")
